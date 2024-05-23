@@ -1,41 +1,39 @@
 pipeline {
     agent any
     parameters {
-      choice choices: ['DEVELOPMENT', 'STAGING', 'PRODUCTION'], 
-         description: 'Choose the environment for this deployment.', 
-         name: 'ENVIRONMENT'
-      
-      password defaultValue: '123ABC', 
-         description: 'Enter the API key to use for this deployment.', 
-         name: 'API_KEY'
-      
-      text defaultValue: 'This is the change log.', 
-         description: 'Enter the components that were changed in this deployment.', 
-         name: 'CHANGELOG'
-    }    
+        choice(name: 'NUMBER',
+            choices: [10,20,30,40,50,60,70,80,90],
+            description: 'Select the value for F(n) for the Fibonnai sequence.')
+    }
+    options {
+        buildDiscarder(logRotator(daysToKeepStr: '10', numToKeepStr: '10'))
+        timeout(time: 12, unit: 'HOURS')
+        timestamps()
+    }
+    triggers {
+        cron '@midnight'
+    }
     stages {
-        stage('Test') {
+        stage('Make executable') {
             steps {
-                echo "This step tests the compiled project"
+                sh('chmod +x ./scripts/fibonacci.sh')
             }
         }
-        stage('Deploy') {
-            when {
-              expression { params.ENVIRONMENT == "PRODUCTION" }
-            }            
+        stage('Relative path') {
             steps {
-                echo "This step deploys the project"
+                sh("./scripts/fibonacci.sh ${env.NUMBER}")
             }
-        }        
-        stage('Report') {
+        }
+        stage('Full path') {
             steps {
-                echo "This stage generates a report"
-                sh "printf \"${params.CHANGELOG}\" > ${params.ENVIRONMENT}.txt"
-                archiveArtifacts allowEmptyArchive: true, 
-                    artifacts: '*.txt', 
-                    fingerprint: true, 
-                    followSymlinks: false, 
-                    onlyIfSuccessful: true
+                sh("${env.WORKSPACE}/scripts/fibonacci.sh ${env.NUMBER}")
+            }
+        }
+        stage('Change directory') {
+            steps {
+                dir("${env.WORKSPACE}/scripts"){
+                    sh("./fibonacci.sh ${env.NUMBER}")
+                }
             }
         }
     }
